@@ -45,7 +45,7 @@ Example app user: `sambaadmin`
 
 ```bash
 cd /home/sambaadmin
-git clone <your-repo-url> web-samba-tool
+git clone https://github.com/bretton/web-samba-tool.git web-samba-tool
 cd web-samba-tool
 python3 -m venv .venv
 source .venv/bin/activate
