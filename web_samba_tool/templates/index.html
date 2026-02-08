@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="card">
+  <h2>Create User</h2>
+  <form method="post" action="{{ url_for('create_user') }}" class="form-grid">
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" required pattern="[a-z_][a-z0-9_-]{0,31}">
+
+    <label for="unix_password">Linux Password</label>
+    <input id="unix_password" name="unix_password" type="password" required>
+
+    <label for="samba_password">Samba Password</label>
+    <input id="samba_password" name="samba_password" type="password">
+
+    <label class="checkbox-row" for="same_password">
+      <input id="same_password" name="same_password" type="checkbox" checked>
+      Use Linux password for Samba
+    </label>
+
+    <fieldset class="group-picker">
+      <legend>Additional Linux Groups</legend>
+      {% if groups %}
+        <div class="group-grid">
+          {% for group in groups %}
+            <label>
+              <input type="checkbox" name="groups" value="{{ group }}">
+              {{ group }}
+            </label>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No candidate groups found.</p>
+      {% endif %}
+    </fieldset>
+
+    <button type="submit">Create User + Samba Account</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Current Users</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>UID</th>
+          <th>Groups</th>
+          <th>Samba User</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+          <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.uid }}</td>
+            <td>{{ user.groups | join(', ') }}</td>
+            <td>{{ 'Yes' if user.samba_enabled else 'No' }}</td>
+            <td>
+              <form method="post" action="{{ url_for('delete_user', username=user.username) }}" onsubmit="return confirm('Delete user {{ user.username }} and home directory?')">
+                <button type="submit" class="danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5">No managed users found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>/shares Group Ownership</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Share Directory</th>
+          <th>Owning Group</th>
+          <th>Mode</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for share in shares %}
+          <tr>
+            <td>{{ share.name }}</td>
+            <td>{{ share.group }}</td>
+            <td>{{ share.mode }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="3">No share directories found under /shares.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="footnote">
+    Samba shares are assumed to be configured manually in /etc/samba/smb.conf.
+    Access is controlled via Linux group membership and filesystem permissions.
+  </p>
+</section>
+
+<script>
+  const samePassword = document.getElementById('same_password');
+  const sambaPassword = document.getElementById('samba_password');
+
+  function toggleSambaPassword() {
+    sambaPassword.disabled = samePassword.checked;
+    sambaPassword.required = !samePassword.checked;
+    if (samePassword.checked) {
+      sambaPassword.value = '';
+    }
+  }
+
+  samePassword.addEventListener('change', toggleSambaPassword);
+  toggleSambaPassword();
+</script>
+{% endblock %}

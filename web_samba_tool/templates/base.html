@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Web Samba Tool</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header class="page-header">
+      <div class="page-header-main">
+        <div>
+          <h1>Web Samba Tool</h1>
+          <p>Linux user and Samba account management for Ubuntu 24.04</p>
+        </div>
+        {% if session.get('authenticated') %}
+          <div class="auth-bar">
+            <span>Signed in as {{ session.get('auth_user') }}</span>
+            <form method="post" action="{{ url_for('logout') }}">
+              <button type="submit">Logout</button>
+            </form>
+          </div>
+        {% endif %}
+      </div>
+    </header>
+
+    <main class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <section class="alerts">
+            {% for category, message in messages %}
+              <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endwith %}
+
+      {% if warnings %}
+        <section class="alerts">
+          {% for warning in warnings %}
+            <div class="alert warning">{{ warning }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

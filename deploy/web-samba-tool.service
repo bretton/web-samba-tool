@@ -1,0 +1,24 @@
+[Unit]
+Description=Web Samba Tool (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/APPUSER/web-samba-tool
+Environment=PATH=/home/APPUSER/web-samba-tool/.venv/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=APP_SECRET=replace-with-random-secret
+Environment=APP_ADMIN_USER=admin
+Environment=APP_ADMIN_PASSWORD_HASH=replace-with-werkzeug-hash
+Environment=APP_AUDIT_LOG=/home/APPUSER/web-samba-tool/run/audit.log
+Environment=APP_MANAGED_USERS_FILE=/home/APPUSER/web-samba-tool/run/managed_users.json
+Environment=APP_COMMAND_TIMEOUT_SECONDS=15
+Environment=APP_LOGIN_MAX_ATTEMPTS=5
+Environment=APP_LOGIN_WINDOW_SECONDS=900
+Environment=APP_LOGIN_LOCKOUT_SECONDS=900
+ExecStartPre=/usr/bin/mkdir -p /home/APPUSER/web-samba-tool/run
+ExecStart=/home/APPUSER/web-samba-tool/.venv/bin/gunicorn --workers 2 --bind unix:/home/APPUSER/web-samba-tool/run/gunicorn.sock 'web_samba_tool:create_app()'
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
