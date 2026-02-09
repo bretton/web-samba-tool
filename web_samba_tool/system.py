@@ -475,6 +475,36 @@ def delete_managed_user(username: str) -> None:
     _remove_tool_managed_user(normalized_username)
 
 
+def update_managed_user_groups(username: str, groups: Iterable[str]) -> None:
+    normalized_username = _validate_username(username)
+    normalized_groups = _validate_groups(groups)
+
+    if not _is_tool_managed_user(normalized_username):
+        raise ValueError(f"Refusing to edit unmanaged user: {normalized_username}")
+
+    if not _user_exists(normalized_username):
+        raise ValueError(f"User does not exist: {normalized_username}")
+
+    uid_min = _get_uid_min()
+    passwd_result = run_command(["getent", "passwd", normalized_username])
+    _, _, uid, _, _, _, _ = passwd_result.stdout.strip().split(":", maxsplit=6)
+    uid_value = int(uid)
+    if uid_value < uid_min:
+        raise ValueError("Refusing to modify groups for a system account.")
+
+    current_user = pwd.getpwuid(os.getuid()).pw_name
+    if normalized_username == current_user:
+        raise ValueError("Refusing to modify groups for the app runtime user.")
+
+    for group_name in normalized_groups:
+        if not _group_exists(group_name):
+            raise ValueError(f"Group does not exist: {group_name}")
+
+    run_command(
+        SUDO_PREFIX + ["usermod", "-G", ",".join(normalized_groups), normalized_username]
+    )
+
+
 def _runtime_search_path() -> str:
     parts = [value for value in os.environ.get("PATH", "").split(os.pathsep) if value]
     for extra in ("/usr/sbin", "/sbin"):

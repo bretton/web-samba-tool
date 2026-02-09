@@ -28,6 +28,7 @@ from .system import (
     list_managed_users,
     list_shares,
     runtime_warnings,
+    update_managed_user_groups,
 )
 
 _PLACEHOLDER_APP_SECRETS = {
@@ -81,6 +82,7 @@ def create_app() -> Flask:
         users = []
         groups = []
         shares = []
+        editable_groups_by_user = {}
         warnings = runtime_warnings()
         warnings.extend(auth_warnings())
 
@@ -88,6 +90,9 @@ def create_app() -> Flask:
             users = list_managed_users()
             groups = candidate_groups()
             shares = list_shares()
+            editable_groups_by_user = {
+                user.username: sorted(set(groups).union(user.groups)) for user in users
+            }
         except CommandTimeoutError as exc:
             flash("System command timed out while loading data. Please try again.", "error")
             audit_event(
@@ -110,6 +115,7 @@ def create_app() -> Flask:
             users=users,
             groups=groups,
             shares=shares,
+            editable_groups_by_user=editable_groups_by_user,
             warnings=warnings,
         )
 
@@ -277,6 +283,46 @@ def create_app() -> Flask:
             flash(str(exc), "error")
             audit_event(
                 "user_delete",
+                outcome="error",
+                actor=actor,
+                username=username,
+                client_ip=client_ip,
+                error=str(exc),
+            )
+
+        return redirect(url_for("index"))
+
+    @app.post("/users/<username>/groups")
+    @login_required
+    def update_user_groups(username: str):
+        group_names = request.form.getlist("groups")
+        actor = session.get("auth_user")
+        client_ip = _client_ip()
+        try:
+            update_managed_user_groups(username, group_names)
+            flash(f"Updated supplemental groups for user {username}.", "success")
+            audit_event(
+                "user_groups_update",
+                outcome="success",
+                actor=actor,
+                username=username,
+                groups=",".join(sorted(set(group_names))),
+                client_ip=client_ip,
+            )
+        except CommandTimeoutError as exc:
+            flash("Group update timed out while running a system command.", "error")
+            audit_event(
+                "user_groups_update",
+                outcome="timeout",
+                actor=actor,
+                username=username,
+                client_ip=client_ip,
+                error=str(exc),
+            )
+        except (ValueError, CommandError) as exc:
+            flash(str(exc), "error")
+            audit_event(
+                "user_groups_update",
                 outcome="error",
                 actor=actor,
                 username=username,

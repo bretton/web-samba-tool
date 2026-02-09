@@ -150,6 +150,37 @@ td {
   vertical-align: top;
 }
 
+.actions-cell {
+  min-width: 290px;
+}
+
+.action-stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.group-editor summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.group-edit-form {
+  margin-top: 0.4rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.group-grid.compact {
+  max-height: 170px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.55rem;
+  background: #f9fbfc;
+}
+
 .alerts {
   margin: 0 0 1rem;
 }

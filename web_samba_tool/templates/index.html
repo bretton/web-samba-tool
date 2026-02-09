@@ -58,10 +58,26 @@
             <td>{{ user.uid }}</td>
             <td>{{ user.groups | join(', ') }}</td>
             <td>{{ 'Yes' if user.samba_enabled else 'No' }}</td>
-            <td>
-              <form method="post" action="{{ url_for('delete_user', username=user.username) }}" onsubmit="return confirm('Delete user {{ user.username }} and home directory?')">
-                <button type="submit" class="danger">Delete</button>
-              </form>
+            <td class="actions-cell">
+              <div class="action-stack">
+                <details class="group-editor">
+                  <summary>Edit Groups</summary>
+                  <form method="post" action="{{ url_for('update_user_groups', username=user.username) }}" class="group-edit-form">
+                    <div class="group-grid compact">
+                      {% for group in editable_groups_by_user.get(user.username, groups) %}
+                        <label>
+                          <input type="checkbox" name="groups" value="{{ group }}" {% if group in user.groups %}checked{% endif %}>
+                          {{ group }}
+                        </label>
+                      {% endfor %}
+                    </div>
+                    <button type="submit">Save Groups</button>
+                  </form>
+                </details>
+                <form method="post" action="{{ url_for('delete_user', username=user.username) }}" onsubmit="return confirm('Delete user {{ user.username }} and home directory?')">
+                  <button type="submit" class="danger">Delete</button>
+                </form>
+              </div>
             </td>
           </tr>
         {% else %}

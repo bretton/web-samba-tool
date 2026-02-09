@@ -15,6 +15,7 @@ Repository-specific implementation and safety rules for humans and coding agents
 - Adds Linux users.
 - Sets Linux password.
 - Adds selected supplemental Linux groups during user creation.
+- Updates supplemental Linux groups for existing managed users.
 - Creates Samba user/password (`smbpasswd -a`).
 - Deletes Linux users (`deluser --remove-home`) and removes Samba users (`smbpasswd -x`) **only for users previously created by this tool**.
 - Shows current `/shares` directories with group ownership + mode.
@@ -106,10 +107,16 @@ Generate a hash from a plaintext password:
 
 ```bash
 source .venv/bin/activate
-python -c "from werkzeug.security import generate_password_hash; print(generate_password_hash(input('Admin password: ')))"
+python -c 'from getpass import getpass; from werkzeug.security import generate_password_hash; print(generate_password_hash(getpass("Admin password: ")))'
 ```
 
 Use the output value as `APP_ADMIN_PASSWORD_HASH`.
+
+If you need to hash a literal password inline (for example one containing `!`), use single quotes around the Python command to avoid Bash history expansion:
+
+```bash
+python -c 'from werkzeug.security import generate_password_hash; print(generate_password_hash("@dm!n-testsamba"))'
+```
 
 ## Run with systemd user service
 
@@ -144,12 +151,15 @@ sudo loginctl enable-linger sambaadmin
 
 1. Copy nginx site:
 
+As root user, or user with sudo privileges:
+
 ```bash
+cd USERDIR/web-samba-tool
 sudo cp deploy/nginx-web-samba-tool.conf /etc/nginx/sites-available/web-samba-tool.conf
 ```
 
-2. Edit `/etc/nginx/sites-available/web-samba-tool.conf` and replace `APPUSER` path.
-   You can also uncomment the `allow`/`deny` lines to enforce internal network ranges.
+2. Optionally edit `/etc/nginx/sites-available/web-samba-tool.conf` to change port/IP policy.
+   You can uncomment the `allow`/`deny` lines to enforce internal network ranges.
 
 3. Enable site:
 

@@ -12,6 +12,7 @@ from web_samba_tool.system import (
     delete_managed_user,
     list_managed_users,
     run_command,
+    update_managed_user_groups,
 )
 
 
@@ -85,6 +86,63 @@ class SystemHardeningTests(unittest.TestCase):
                 users = json.load(handle)
 
         self.assertEqual(users, ["alice"])
+
+    def test_update_groups_rejects_unmanaged_users(self) -> None:
+        with patch("web_samba_tool.system._is_tool_managed_user", return_value=False):
+            with self.assertRaisesRegex(ValueError, "unmanaged user"):
+                update_managed_user_groups("alice", ["finance"])
+
+    def test_update_groups_rejects_unknown_group(self) -> None:
+        with patch("web_samba_tool.system._is_tool_managed_user", return_value=True):
+            with patch("web_samba_tool.system._user_exists", return_value=True):
+                with patch("web_samba_tool.system._get_uid_min", return_value=1000):
+                    with patch("web_samba_tool.system.run_command") as mock_run_command:
+                        mock_run_command.return_value = _completed_process(
+                            ["getent", "passwd", "alice"],
+                            stdout="alice:x:1001:1001::/home/alice:/bin/bash\n",
+                        )
+                        with patch("web_samba_tool.system.os.getuid", return_value=1000):
+                            with patch(
+                                "web_samba_tool.system.pwd.getpwuid",
+                                return_value=SimpleNamespace(pw_name="appuser"),
+                            ):
+                                with patch(
+                                    "web_samba_tool.system._group_exists", return_value=False
+                                ):
+                                    with self.assertRaisesRegex(
+                                        ValueError, "Group does not exist: finance"
+                                    ):
+                                        update_managed_user_groups("alice", ["finance"])
+
+    def test_update_groups_runs_usermod_with_sorted_unique_groups(self) -> None:
+        commands = []
+
+        def fake_run_command(cmd, *, input_text=None, check=True):
+            commands.append(cmd)
+            if cmd == ["getent", "passwd", "alice"]:
+                return _completed_process(cmd, stdout="alice:x:1001:1001::/home/alice:/bin/bash\n")
+            return _completed_process(cmd)
+
+        with patch("web_samba_tool.system._is_tool_managed_user", return_value=True):
+            with patch("web_samba_tool.system._user_exists", return_value=True):
+                with patch("web_samba_tool.system._group_exists", return_value=True):
+                    with patch("web_samba_tool.system._get_uid_min", return_value=1000):
+                        with patch("web_samba_tool.system.os.getuid", return_value=1000):
+                            with patch(
+                                "web_samba_tool.system.pwd.getpwuid",
+                                return_value=SimpleNamespace(pw_name="appuser"),
+                            ):
+                                with patch(
+                                    "web_samba_tool.system.run_command", side_effect=fake_run_command
+                                ):
+                                    update_managed_user_groups(
+                                        "alice", ["finance", "nasusers", "finance"]
+                                    )
+
+        self.assertEqual(
+            commands[-1],
+            ["sudo", "-n", "usermod", "-G", "finance,nasusers", "alice"],
+        )
 
 
 if __name__ == "__main__":

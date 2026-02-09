@@ -16,7 +16,7 @@ Environment=APP_LOGIN_MAX_ATTEMPTS=5
 Environment=APP_LOGIN_WINDOW_SECONDS=900
 Environment=APP_LOGIN_LOCKOUT_SECONDS=900
 ExecStartPre=/usr/bin/mkdir -p /home/APPUSER/web-samba-tool/run
-ExecStart=/home/APPUSER/web-samba-tool/.venv/bin/gunicorn --workers 2 --bind unix:/home/APPUSER/web-samba-tool/run/gunicorn.sock 'web_samba_tool:create_app()'
+ExecStart=/home/APPUSER/web-samba-tool/.venv/bin/gunicorn --workers 2 --bind 127.0.0.1:5001 'web_samba_tool:create_app()'
 Restart=on-failure
 RestartSec=3
 
