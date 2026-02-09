@@ -107,7 +107,7 @@ Generate a hash from a plaintext password:
 
 ```bash
 source .venv/bin/activate
-python -c 'from getpass import getpass; from werkzeug.security import generate_password_hash; print(generate_password_hash(getpass("Admin password: ")))'
+python -c 'from getpass import getpass; from werkzeug.security import generate_password_hash; print(generate_password_hash(getpass("PASSWORD-GOES-HERE")))'
 ```
 
 Use the output value as `APP_ADMIN_PASSWORD_HASH`.
@@ -115,7 +115,7 @@ Use the output value as `APP_ADMIN_PASSWORD_HASH`.
 If you need to hash a literal password inline (for example one containing `!`), use single quotes around the Python command to avoid Bash history expansion:
 
 ```bash
-python -c 'from werkzeug.security import generate_password_hash; print(generate_password_hash("@dm!n-testsamba"))'
+python -c 'from werkzeug.security import generate_password_hash; print(generate_password_hash("P@SSWORD!GOES!HERE"))'
 ```
 
 ## Run with systemd user service
