@@ -24,7 +24,7 @@ Repository-specific implementation and safety rules for humans and coding agents
 
 This app does **not** edit `/etc/samba/smb.conf`. Samba shares are expected to be managed manually there, and share access is enforced by Linux group membership + filesystem permissions.
 
-Ubuntu uses `deluser` for removal (instead of `rmuser`).
+Ubuntu uses `deluser` for removal.
 
 ## Requirements
 
