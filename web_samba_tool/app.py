@@ -22,6 +22,7 @@ from .auth import (
 from .system import (
     CommandError,
     CommandTimeoutError,
+    DISALLOWED_SUPPLEMENTAL_GROUPS,
     candidate_groups,
     create_managed_user,
     delete_managed_user,
@@ -91,7 +92,12 @@ def create_app() -> Flask:
             groups = candidate_groups()
             shares = list_shares()
             editable_groups_by_user = {
-                user.username: sorted(set(groups).union(user.groups)) for user in users
+                user.username: sorted(
+                    group
+                    for group in set(groups).union(user.groups)
+                    if group not in DISALLOWED_SUPPLEMENTAL_GROUPS
+                )
+                for user in users
             }
         except CommandTimeoutError as exc:
             flash("System command timed out while loading data. Please try again.", "error")

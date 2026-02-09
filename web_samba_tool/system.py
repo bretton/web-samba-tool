@@ -17,6 +17,7 @@ USERNAME_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
 GROUP_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
 DEFAULT_MANAGED_USERS_FILE = "run/managed_users.json"
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 15.0
+DISALLOWED_SUPPLEMENTAL_GROUPS = {"nogroup", "root"}
 SUDO_PREFIX = ["sudo", "-n"]
 REQUIRED_COMMANDS = [
     "adduser",
@@ -123,6 +124,8 @@ def _validate_groups(groups: Iterable[str]) -> list[str]:
         cleaned = group_name.strip()
         if not GROUP_RE.match(cleaned):
             raise ValueError(f"Invalid group name: {group_name}")
+        if cleaned in DISALLOWED_SUPPLEMENTAL_GROUPS:
+            raise ValueError(f"Group is not allowed for assignment: {cleaned}")
         validated.append(cleaned)
     return sorted(set(validated))
 
@@ -179,7 +182,7 @@ def candidate_groups() -> list[str]:
     for share in list_shares():
         groups.add(share.group)
 
-    return sorted(groups)
+    return sorted(group for group in groups if group not in DISALLOWED_SUPPLEMENTAL_GROUPS)
 
 
 def _group_exists(group_name: str) -> bool:

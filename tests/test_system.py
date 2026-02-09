@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from web_samba_tool.system import (
     CommandTimeoutError,
+    candidate_groups,
     create_managed_user,
     delete_managed_user,
     list_managed_users,
@@ -24,6 +25,10 @@ class SystemHardeningTests(unittest.TestCase):
     def test_create_user_rejects_control_chars_in_unix_password(self) -> None:
         with self.assertRaisesRegex(ValueError, "control characters"):
             create_managed_user("alice", "bad\npass", "safe-pass", [])
+
+    def test_create_user_rejects_disallowed_groups(self) -> None:
+        with self.assertRaisesRegex(ValueError, "not allowed for assignment"):
+            create_managed_user("alice", "safePass123", "safePass123", ["root"])
 
     def test_delete_rejects_unmanaged_users(self) -> None:
         with patch("web_samba_tool.system._is_tool_managed_user", return_value=False):
@@ -63,6 +68,17 @@ class SystemHardeningTests(unittest.TestCase):
 
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0].username, "managed")
+
+    def test_candidate_groups_excludes_root_and_nogroup(self) -> None:
+        with patch("web_samba_tool.system._get_uid_min", return_value=1000):
+            with patch(
+                "web_samba_tool.system._all_groups",
+                return_value=[("finance", 1001), ("root", 1002), ("nogroup", 1003)],
+            ):
+                with patch("web_samba_tool.system.list_shares", return_value=[]):
+                    groups = candidate_groups()
+
+        self.assertEqual(groups, ["finance"])
 
     def test_create_user_records_managed_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
