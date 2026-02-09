@@ -70,4 +70,10 @@ The following simplified `smb.conf` will enable ACLs and prevent users from seei
    force directory mode = 2770
    inherit permissions = yes
    inherit acls = yes
+
+   # CRITICAL: stop DOS attribute → exec-bit weirdness
+   store dos attributes = yes
+   map archive = no
+   map system = no
+   map hidden = no
 ```
