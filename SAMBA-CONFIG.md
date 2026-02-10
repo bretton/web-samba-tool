@@ -50,6 +50,15 @@ The following simplified `smb.conf` will enable ACLs and prevent users from seei
    # Important for POSIX-style permissions
    unix extensions = yes
 
+   aio read size = 16384
+   aio write size = 16384
+
+   min receivefile size = 16384
+   getwd cache = true
+
+   oplocks = yes
+   level2 oplocks = yes
+
 #======================= Share Definitions =======================
 
 [shares]
