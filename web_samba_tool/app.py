@@ -22,10 +22,10 @@ from .auth import (
 from .system import (
     CommandError,
     CommandTimeoutError,
-    DISALLOWED_SUPPLEMENTAL_GROUPS,
     candidate_groups,
     create_managed_user,
     delete_managed_user,
+    disallowed_supplemental_groups,
     list_managed_users,
     list_shares,
     runtime_warnings,
@@ -91,11 +91,12 @@ def create_app() -> Flask:
             users = list_managed_users()
             groups = candidate_groups()
             shares = list_shares()
+            blocked_groups = disallowed_supplemental_groups()
             editable_groups_by_user = {
                 user.username: sorted(
                     group
                     for group in set(groups).union(user.groups)
-                    if group not in DISALLOWED_SUPPLEMENTAL_GROUPS
+                    if group not in blocked_groups
                 )
                 for user in users
             }

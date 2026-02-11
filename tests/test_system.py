@@ -11,6 +11,7 @@ from web_samba_tool.system import (
     candidate_groups,
     create_managed_user,
     delete_managed_user,
+    disallowed_supplemental_groups,
     list_managed_users,
     run_command,
     update_managed_user_groups,
@@ -29,6 +30,15 @@ class SystemHardeningTests(unittest.TestCase):
     def test_create_user_rejects_disallowed_groups(self) -> None:
         with self.assertRaisesRegex(ValueError, "not allowed for assignment"):
             create_managed_user("alice", "safePass123", "safePass123", ["root"])
+
+    def test_create_user_rejects_env_configured_disallowed_group(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"APP_DISALLOWED_SUPPLEMENTAL_GROUPS": "finance,nogroup,root"},
+            clear=False,
+        ):
+            with self.assertRaisesRegex(ValueError, "not allowed for assignment"):
+                create_managed_user("alice", "safePass123", "safePass123", ["finance"])
 
     def test_delete_rejects_unmanaged_users(self) -> None:
         with patch("web_samba_tool.system._is_tool_managed_user", return_value=False):
@@ -79,6 +89,31 @@ class SystemHardeningTests(unittest.TestCase):
                     groups = candidate_groups()
 
         self.assertEqual(groups, ["finance"])
+
+    def test_candidate_groups_respects_env_disallowed_groups(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"APP_DISALLOWED_SUPPLEMENTAL_GROUPS": "finance,blockedgroup"},
+            clear=False,
+        ):
+            with patch("web_samba_tool.system._get_uid_min", return_value=1000):
+                with patch(
+                    "web_samba_tool.system._all_groups",
+                    return_value=[("finance", 1001), ("engineering", 1002)],
+                ):
+                    with patch("web_samba_tool.system.list_shares", return_value=[]):
+                        groups = candidate_groups()
+
+        self.assertEqual(groups, ["engineering"])
+
+    def test_disallowed_groups_defaults_when_env_empty_or_invalid(self) -> None:
+        with patch.dict(os.environ, {"APP_DISALLOWED_SUPPLEMENTAL_GROUPS": ""}, clear=False):
+            groups = disallowed_supplemental_groups()
+        self.assertEqual(groups, {"nogroup", "root"})
+
+        with patch.dict(os.environ, {"APP_DISALLOWED_SUPPLEMENTAL_GROUPS": "!!!,   "}, clear=False):
+            groups = disallowed_supplemental_groups()
+        self.assertEqual(groups, {"nogroup", "root"})
 
     def test_create_user_records_managed_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

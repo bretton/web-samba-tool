@@ -17,7 +17,7 @@ USERNAME_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
 GROUP_RE = re.compile(r"^[a-z_][a-z0-9_-]{0,31}$")
 DEFAULT_MANAGED_USERS_FILE = "run/managed_users.json"
 DEFAULT_COMMAND_TIMEOUT_SECONDS = 15.0
-DISALLOWED_SUPPLEMENTAL_GROUPS = {"nogroup", "root"}
+DEFAULT_DISALLOWED_SUPPLEMENTAL_GROUPS = {"nogroup", "root"}
 SUDO_PREFIX = ["sudo", "-n"]
 REQUIRED_COMMANDS = [
     "adduser",
@@ -119,12 +119,13 @@ def _validate_username(username: str) -> str:
 
 
 def _validate_groups(groups: Iterable[str]) -> list[str]:
+    disallowed = disallowed_supplemental_groups()
     validated = []
     for group_name in groups:
         cleaned = group_name.strip()
         if not GROUP_RE.match(cleaned):
             raise ValueError(f"Invalid group name: {group_name}")
-        if cleaned in DISALLOWED_SUPPLEMENTAL_GROUPS:
+        if cleaned in disallowed:
             raise ValueError(f"Group is not allowed for assignment: {cleaned}")
         validated.append(cleaned)
     return sorted(set(validated))
@@ -175,14 +176,29 @@ def _all_groups() -> list[tuple[str, int]]:
     return entries
 
 
+def disallowed_supplemental_groups() -> set[str]:
+    raw = os.environ.get("APP_DISALLOWED_SUPPLEMENTAL_GROUPS", "").strip()
+    if not raw:
+        return set(DEFAULT_DISALLOWED_SUPPLEMENTAL_GROUPS)
+
+    parsed = set()
+    for value in raw.split(","):
+        cleaned = value.strip()
+        if cleaned and GROUP_RE.match(cleaned):
+            parsed.add(cleaned)
+
+    return parsed or set(DEFAULT_DISALLOWED_SUPPLEMENTAL_GROUPS)
+
+
 def candidate_groups() -> list[str]:
     uid_min = _get_uid_min()
     groups = {name for name, gid in _all_groups() if gid >= uid_min}
+    disallowed = disallowed_supplemental_groups()
 
     for share in list_shares():
         groups.add(share.group)
 
-    return sorted(group for group in groups if group not in DISALLOWED_SUPPLEMENTAL_GROUPS)
+    return sorted(group for group in groups if group not in disallowed)
 
 
 def _group_exists(group_name: str) -> bool:

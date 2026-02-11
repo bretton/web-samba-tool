@@ -102,6 +102,7 @@ Optional hardening/runtime environment variables:
 - `APP_LOGIN_MAX_ATTEMPTS` (default: `5`)
 - `APP_LOGIN_WINDOW_SECONDS` (default: `900`)
 - `APP_LOGIN_LOCKOUT_SECONDS` (default: `900`)
+- `APP_DISALLOWED_SUPPLEMENTAL_GROUPS` (default: `root,nogroup`; comma-separated group names)
 
 Generate a hash from a plaintext password:
 
@@ -132,6 +133,8 @@ cp deploy/web-samba-tool.service ~/.config/systemd/user/web-samba-tool.service
 - `APP_SECRET`
 - `APP_ADMIN_USER`
 - `APP_ADMIN_PASSWORD_HASH`
+
+   Optional: adjust `APP_DISALLOWED_SUPPLEMENTAL_GROUPS` if you want to block additional groups from assignment in the UI/API.
 
 3. Start service:
 
