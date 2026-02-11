@@ -524,6 +524,41 @@ def update_managed_user_groups(username: str, groups: Iterable[str]) -> None:
     )
 
 
+def reset_managed_user_password(username: str, new_password: str) -> None:
+    normalized_username = _validate_username(username)
+    validated_password = _validate_password(
+        new_password,
+        label="New password",
+        allow_colon=False,
+    )
+
+    if not _is_tool_managed_user(normalized_username):
+        raise ValueError(f"Refusing to reset password for unmanaged user: {normalized_username}")
+
+    if not _user_exists(normalized_username):
+        raise ValueError(f"User does not exist: {normalized_username}")
+
+    uid_min = _get_uid_min()
+    passwd_result = run_command(["getent", "passwd", normalized_username])
+    _, _, uid, _, _, _, _ = passwd_result.stdout.strip().split(":", maxsplit=6)
+    uid_value = int(uid)
+    if uid_value < uid_min:
+        raise ValueError("Refusing to reset password for a system account.")
+
+    current_user = pwd.getpwuid(os.getuid()).pw_name
+    if normalized_username == current_user:
+        raise ValueError("Refusing to reset password for the app runtime user.")
+
+    run_command(
+        SUDO_PREFIX + ["chpasswd"],
+        input_text=f"{normalized_username}:{validated_password}\n",
+    )
+    run_command(
+        SUDO_PREFIX + ["smbpasswd", "-s", normalized_username],
+        input_text=f"{validated_password}\n{validated_password}\n",
+    )
+
+
 def _runtime_search_path() -> str:
     parts = [value for value in os.environ.get("PATH", "").split(os.pathsep) if value]
     for extra in ("/usr/sbin", "/sbin"):

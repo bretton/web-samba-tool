@@ -28,6 +28,7 @@ from .system import (
     disallowed_supplemental_groups,
     list_managed_users,
     list_shares,
+    reset_managed_user_password,
     runtime_warnings,
     update_managed_user_groups,
 )
@@ -330,6 +331,59 @@ def create_app() -> Flask:
             flash(str(exc), "error")
             audit_event(
                 "user_groups_update",
+                outcome="error",
+                actor=actor,
+                username=username,
+                client_ip=client_ip,
+                error=str(exc),
+            )
+
+        return redirect(url_for("index"))
+
+    @app.post("/users/<username>/password")
+    @login_required
+    def reset_user_password(username: str):
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        actor = session.get("auth_user")
+        client_ip = _client_ip()
+
+        if new_password != confirm_password:
+            flash("Password confirmation does not match.", "error")
+            audit_event(
+                "user_password_reset",
+                outcome="error",
+                actor=actor,
+                username=username,
+                client_ip=client_ip,
+                error="password_confirmation_mismatch",
+            )
+            return redirect(url_for("index"))
+
+        try:
+            reset_managed_user_password(username, new_password)
+            flash(f"Reset Linux and Samba password for user {username}.", "success")
+            audit_event(
+                "user_password_reset",
+                outcome="success",
+                actor=actor,
+                username=username,
+                client_ip=client_ip,
+            )
+        except CommandTimeoutError as exc:
+            flash("Password reset timed out while running a system command.", "error")
+            audit_event(
+                "user_password_reset",
+                outcome="timeout",
+                actor=actor,
+                username=username,
+                client_ip=client_ip,
+                error=str(exc),
+            )
+        except (ValueError, CommandError) as exc:
+            flash(str(exc), "error")
+            audit_event(
+                "user_password_reset",
                 outcome="error",
                 actor=actor,
                 username=username,

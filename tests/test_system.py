@@ -13,6 +13,7 @@ from web_samba_tool.system import (
     delete_managed_user,
     disallowed_supplemental_groups,
     list_managed_users,
+    reset_managed_user_password,
     run_command,
     update_managed_user_groups,
 )
@@ -193,6 +194,43 @@ class SystemHardeningTests(unittest.TestCase):
         self.assertEqual(
             commands[-1],
             ["sudo", "-n", "usermod", "-G", "finance,nasusers", "alice"],
+        )
+
+    def test_reset_password_rejects_unmanaged_users(self) -> None:
+        with patch("web_samba_tool.system._is_tool_managed_user", return_value=False):
+            with self.assertRaisesRegex(ValueError, "unmanaged user"):
+                reset_managed_user_password("alice", "SafePass123")
+
+    def test_reset_password_updates_linux_and_samba_passwords(self) -> None:
+        commands: list[tuple[list[str], str | None]] = []
+
+        def fake_run_command(cmd, *, input_text=None, check=True):
+            commands.append((cmd, input_text))
+            if cmd == ["getent", "passwd", "alice"]:
+                return _completed_process(cmd, stdout="alice:x:1001:1001::/home/alice:/bin/bash\n")
+            return _completed_process(cmd)
+
+        with patch("web_samba_tool.system._is_tool_managed_user", return_value=True):
+            with patch("web_samba_tool.system._user_exists", return_value=True):
+                with patch("web_samba_tool.system._get_uid_min", return_value=1000):
+                    with patch("web_samba_tool.system.os.getuid", return_value=1000):
+                        with patch(
+                            "web_samba_tool.system.pwd.getpwuid",
+                            return_value=SimpleNamespace(pw_name="appuser"),
+                        ):
+                            with patch(
+                                "web_samba_tool.system.run_command",
+                                side_effect=fake_run_command,
+                            ):
+                                reset_managed_user_password("alice", "SafePass123")
+
+        self.assertEqual(
+            commands[-2],
+            (["sudo", "-n", "chpasswd"], "alice:SafePass123\n"),
+        )
+        self.assertEqual(
+            commands[-1],
+            (["sudo", "-n", "smbpasswd", "-s", "alice"], "SafePass123\nSafePass123\n"),
         )
 
 

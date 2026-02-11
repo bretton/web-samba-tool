@@ -74,6 +74,18 @@
                     <button type="submit">Save Groups</button>
                   </form>
                 </details>
+                <details class="group-editor">
+                  <summary>Reset Password</summary>
+                  <form method="post" action="{{ url_for('reset_user_password', username=user.username) }}" class="password-reset-form">
+                    <label for="new_password_{{ user.username }}">New Password</label>
+                    <input id="new_password_{{ user.username }}" name="new_password" type="password" autocomplete="new-password" required>
+
+                    <label for="confirm_password_{{ user.username }}">Confirm Password</label>
+                    <input id="confirm_password_{{ user.username }}" name="confirm_password" type="password" autocomplete="new-password" required>
+
+                    <button type="submit">Reset Linux + Samba Password</button>
+                  </form>
+                </details>
                 <form method="post" action="{{ url_for('delete_user', username=user.username) }}" onsubmit="return confirm('Delete user {{ user.username }} and home directory?')">
                   <button type="submit" class="danger">Delete</button>
                 </form>

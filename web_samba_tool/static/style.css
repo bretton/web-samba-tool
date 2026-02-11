@@ -172,6 +172,16 @@ td {
   gap: 0.5rem;
 }
 
+.password-reset-form {
+  margin-top: 0.4rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.password-reset-form input[type="password"] {
+  width: 100%;
+}
+
 .group-grid.compact {
   max-height: 170px;
   overflow: auto;
