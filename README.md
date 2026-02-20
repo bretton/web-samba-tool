@@ -138,6 +138,15 @@ cp deploy/web-samba-tool.service ~/.config/systemd/user/web-samba-tool.service
 
 3. Start service:
 
+In order for this to work the users' `.bashrc` needs to have the following added
+
+```
+# needed to run systemctl commands
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+```
+
+Then either logout and back in, or run `source .bashrc`, then the `systemctl` commands below should work as the user:
+
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now web-samba-tool.service
