@@ -70,7 +70,7 @@ The following simplified `smb.conf` will enable ACLs and prevent users from seei
 
    # CRITICAL: visibility control
    hide unreadable = yes
-   hide unwriteable files = yes
+   #hide unwriteable files = yes
 
    # Correct permission inheritance
    create mask = 0660
